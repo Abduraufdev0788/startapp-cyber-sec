@@ -1,0 +1,57 @@
+[project]
+name = "phishing-detector-backend"
+version = "0.1.0"
+description = "Telegram Phishing & Scam Detection Platform Backend"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Security Engineering Team" }
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C4",  # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "S",   # flake8-bandit (security checks)
+    "T20", # flake8-print (prevent print statements)
+    "ASYNC", # flake8-async
+]
+ignore = [
+    "S101", # allow assert in tests
+    "E501", # line length handled by formatter
+    "S110", # try-except-pass when fallback is deliberate
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106", "S104", "E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_any_generics = false
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
