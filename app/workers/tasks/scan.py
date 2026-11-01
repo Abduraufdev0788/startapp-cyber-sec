@@ -138,6 +138,7 @@ def scan_url_background(
 
             # 6. Notify user of EVERY link with clear evaluation (Yaxshi / Shubhali / Yomon)
             import redis.asyncio as aioredis
+
             from app.core.config import get_settings
 
             if risk_score >= 80:

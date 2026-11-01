@@ -118,19 +118,22 @@ def create_application() -> FastAPI:
 
     # Mount static assets and Admin Web Dashboard
     import os
-    from fastapi.staticfiles import StaticFiles
+
     from fastapi.responses import FileResponse, RedirectResponse
+    from fastapi.staticfiles import StaticFiles
 
     static_dir = os.path.join(os.path.dirname(__file__), "static")
     if os.path.exists(static_dir):
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+    admin_index_file = os.path.join(static_dir, "admin", "index.html")
+    admin_index_exists = os.path.exists(admin_index_file)
+
     @app.get("/admin", include_in_schema=False)
     @app.get("/admin/", include_in_schema=False)
     async def admin_dashboard():
-        index_file = os.path.join(static_dir, "admin", "index.html")
-        if os.path.exists(index_file):
-            return FileResponse(index_file)
+        if admin_index_exists:
+            return FileResponse(admin_index_file)
         return JSONResponse(status_code=404, content={"message": "Admin dashboard frontend not found"})
 
     @app.get("/", include_in_schema=False)

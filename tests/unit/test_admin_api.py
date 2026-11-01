@@ -1,25 +1,48 @@
 """
 Unit tests for Admin Dashboard API endpoints (/api/v1/admin/*).
-Verifies stats calculation, scans pagination, forensic details, and accounts endpoints.
+Verifies stats calculation, scans pagination, forensic details, and security controls.
 """
 
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.api.deps import get_current_admin_user
 from app.db.session import get_db_session
 from app.main import app
 from app.modules.risk_engine.models import ThreatAssessment
 from app.modules.threat_intelligence.models import ThreatIntelligence
 from app.modules.url_scanning.models import ScannedUrl
+from app.modules.users.models import User
+
+
+@pytest.fixture
+def mock_admin_user() -> User:
+    return User(
+        id=uuid.uuid4(),
+        email="admin@phishguard.uz",
+        hashed_password="hashed_secure_admin_password",
+        role="ADMIN",
+        is_active=True,
+    )
 
 
 @pytest.mark.asyncio
-async def test_get_admin_stats_endpoint():
-    """Verifies GET /api/v1/admin/stats returns metrics and system health."""
+async def test_admin_endpoints_unauthorized_without_token():
+    """Verifies that accessing /api/v1/admin/* without token is rejected with 401."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/api/v1/admin/stats")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_get_admin_stats_endpoint(mock_admin_user):
+    """Verifies GET /api/v1/admin/stats returns metrics and system health for admin."""
     mock_db = AsyncMock()
 
     # Mock count queries scalar returns
@@ -29,24 +52,30 @@ async def test_get_admin_stats_endpoint():
     mock_db.execute.return_value = mock_scalar
 
     app.dependency_overrides[get_db_session] = lambda: mock_db
+    app.dependency_overrides[get_current_admin_user] = lambda: mock_admin_user
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        response = await ac.get("/api/v1/admin/stats")
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.get(
+                "/api/v1/admin/stats",
+                headers={"Authorization": "Bearer mock_admin_token"},
+            )
 
-    app.dependency_overrides.clear()
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert "stats" in data
-    assert "system_health" in data
-    assert "connected_accounts" in data["stats"]
-    assert "verdict_distribution" in data["stats"]
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "stats" in data
+        assert "system_health" in data
+        assert "connected_accounts" in data["stats"]
+        assert "verdict_distribution" in data["stats"]
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
-async def test_get_admin_scans_list_endpoint():
+async def test_get_admin_scans_list_endpoint(mock_admin_user):
     """Verifies GET /api/v1/admin/scans returns paginated results."""
     mock_db = AsyncMock()
 
@@ -65,7 +94,7 @@ async def test_get_admin_scans_list_endpoint():
         confidence=0.9,
         impersonated_brand="1xBet",
         reasons=["Illegal casino"],
-        evaluated_by="GEMINI_3_5_FLASH",
+        evaluated_by="GEMINI_2_5_FLASH",
     )
     url_record.threat_intelligence = ThreatIntelligence(
         id=uuid.uuid4(),
@@ -83,24 +112,30 @@ async def test_get_admin_scans_list_endpoint():
 
     mock_db.execute.side_effect = [mock_count, mock_items]
     app.dependency_overrides[get_db_session] = lambda: mock_db
+    app.dependency_overrides[get_current_admin_user] = lambda: mock_admin_user
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        response = await ac.get("/api/v1/admin/scans?page=1&page_size=10")
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.get(
+                "/api/v1/admin/scans?page=1&page_size=10",
+                headers={"Authorization": "Bearer mock_admin_token"},
+            )
 
-    app.dependency_overrides.clear()
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert data["total"] == 1
-    assert len(data["items"]) == 1
-    assert data["items"][0]["domain"] == "uz.1xbet.com"
-    assert data["items"][0]["verdict"] == "SCAM"
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["domain"] == "uz.1xbet.com"
+        assert data["items"][0]["verdict"] == "SCAM"
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
-async def test_get_admin_scan_detail_endpoint():
+async def test_get_admin_scan_detail_endpoint(mock_admin_user):
     """Verifies GET /api/v1/admin/scans/{id} returns full forensic data for slide-over drawer."""
     mock_db = AsyncMock()
     test_id = uuid.uuid4()
@@ -124,7 +159,7 @@ async def test_get_admin_scan_detail_endpoint():
         confidence=0.9,
         impersonated_brand="1xBet",
         reasons=["High risk predatory gambling trap"],
-        evaluated_by="GEMINI_3_5_FLASH",
+        evaluated_by="GEMINI_2_5_FLASH",
     )
     url_record.threat_intelligence = ThreatIntelligence(
         id=uuid.uuid4(),
@@ -140,17 +175,23 @@ async def test_get_admin_scan_detail_endpoint():
     mock_result.scalar_one_or_none.return_value = url_record
     mock_db.execute.return_value = mock_result
     app.dependency_overrides[get_db_session] = lambda: mock_db
+    app.dependency_overrides[get_current_admin_user] = lambda: mock_admin_user
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        response = await ac.get(f"/api/v1/admin/scans/{test_id}")
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.get(
+                f"/api/v1/admin/scans/{test_id}",
+                headers={"Authorization": "Bearer mock_admin_token"},
+            )
 
-    app.dependency_overrides.clear()
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert data["scan"]["domain"] == "uz.1xbet.com"
-    assert data["scan"]["assessment"]["risk_score"] == 78
-    assert "reasons" in data["scan"]["assessment"]
-    assert "intelligence" in data["scan"]
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["scan"]["domain"] == "uz.1xbet.com"
+        assert data["scan"]["assessment"]["risk_score"] == 78
+        assert "reasons" in data["scan"]["assessment"]
+        assert "intelligence" in data["scan"]
+    finally:
+        app.dependency_overrides.clear()

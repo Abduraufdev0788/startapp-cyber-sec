@@ -3,15 +3,17 @@ Authentication and User Account Endpoints.
 Handles registration, login, JWT issuance (access & refresh tokens), and profile retrieval.
 """
 
+import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.exceptions import AppException, AuthenticationException
+from app.core.rate_limit import rate_limit
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -20,6 +22,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db_session
+from app.modules.audit.service import AuditService
 from app.modules.users.models import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -52,10 +55,15 @@ class AuthTokenResponse(BaseModel):
     role: str
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit(times=10, seconds=60, key_prefix="rl_reg"))],
+)
 async def register(
     payload: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    request: Request,
 ) -> dict[str, Any]:
     """Registers a new user on the platform."""
     clean_email = payload.email.lower().strip()
@@ -73,6 +81,7 @@ async def register(
     # Hash password with Argon2id
     hashed = hash_password(payload.password)
     user = User(
+        id=uuid.uuid4(),
         email=clean_email,
         hashed_password=hashed,
         role="USER",
@@ -81,6 +90,17 @@ async def register(
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await AuditService.log_event(
+        db=db,
+        action="USER_REGISTER",
+        user_id=user.id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={"email": user.email, "role": user.role},
+    )
 
     access_token = create_access_token(subject=str(user.id), role=user.role)
     refresh_token = create_refresh_token(subject=str(user.id), role=user.role)
@@ -99,25 +119,48 @@ async def register(
     }
 
 
-@router.post("/login", status_code=status.HTTP_200_OK)
+@router.post(
+    "/login",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(rate_limit(times=15, seconds=60, key_prefix="rl_login"))],
+)
 async def login(
     payload: LoginRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    request: Request,
 ) -> dict[str, Any]:
     """Authenticates a user and issues access and refresh JWT tokens."""
     clean_email = payload.email.lower().strip()
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
 
     stmt = select(User).where(User.email == clean_email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(payload.password, user.hashed_password):
+        await AuditService.log_event(
+            db=db,
+            action="LOGIN_FAILED",
+            user_id=user.id if user else None,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            details={"email": clean_email, "reason": "INVALID_CREDENTIALS"},
+        )
         raise AuthenticationException(
             message="Elektron pochta yoki parol noto'g'ri.",
             code="INVALID_CREDENTIALS",
         )
 
     if not user.is_active:
+        await AuditService.log_event(
+            db=db,
+            action="LOGIN_FAILED",
+            user_id=user.id,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            details={"email": clean_email, "reason": "ACCOUNT_DISABLED"},
+        )
         raise AuthenticationException(
             message="Akkaunt faol emas. Iltimos, ma'muriyat bilan bog'laning.",
             code="ACCOUNT_DISABLED",
@@ -125,6 +168,15 @@ async def login(
 
     access_token = create_access_token(subject=str(user.id), role=user.role)
     refresh_token = create_refresh_token(subject=str(user.id), role=user.role)
+
+    await AuditService.log_event(
+        db=db,
+        action="USER_LOGIN",
+        user_id=user.id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={"email": user.email},
+    )
 
     return {
         "success": True,
@@ -143,12 +195,18 @@ async def login(
 async def refresh_tokens(
     payload: RefreshTokenRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    request: Request,
 ) -> dict[str, Any]:
     """Validates refresh token and generates a fresh access/refresh token pair."""
     token_claims = decode_refresh_token(payload.refresh_token)
     user_id_str = token_claims.get("sub")
 
-    stmt = select(User).where(User.id == user_id_str)
+    try:
+        user_uuid = uuid.UUID(user_id_str)
+    except (ValueError, TypeError) as err:
+        raise AuthenticationException("Invalid user ID in token.", code="INVALID_TOKEN") from err
+
+    stmt = select(User).where(User.id == user_uuid)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -160,6 +218,17 @@ async def refresh_tokens(
 
     access_token = create_access_token(subject=str(user.id), role=user.role)
     refresh_token = create_refresh_token(subject=str(user.id), role=user.role)
+
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await AuditService.log_event(
+        db=db,
+        action="TOKEN_REFRESH",
+        user_id=user.id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        details={"email": user.email},
+    )
 
     return {
         "success": True,

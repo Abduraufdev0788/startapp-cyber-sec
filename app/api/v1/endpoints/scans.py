@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.core.exceptions import ResourceNotFoundException
+from app.core.rate_limit import rate_limit
 from app.db.session import get_db_session
 from app.integrations.gemini.client import GeminiClient
 from app.modules.audit.service import AuditService
@@ -46,7 +47,11 @@ class ScanUrlResponseData(BaseModel):
     reasons: list[str]
 
 
-@router.post("", status_code=status.HTTP_200_OK)
+@router.post(
+    "",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(rate_limit(times=30, seconds=60, key_prefix="rl_scan"))],
+)
 async def scan_url_endpoint(
     payload: ScanUrlRequest,
     current_user: Annotated[User, Depends(get_current_user)],

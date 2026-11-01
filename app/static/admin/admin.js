@@ -13,12 +13,48 @@ let searchDebounceTimer = null;
 let currentDrawerUrlId = null;
 let currentDrawerUrl = null;
 
+// Auth State Management
+function getAuthToken() {
+  return localStorage.getItem('phishguard_admin_token') || '';
+}
+
+function setAuthToken(token) {
+  if (token) {
+    localStorage.setItem('phishguard_admin_token', token);
+    const label = document.getElementById('admin-auth-btn-label');
+    if (label) label.innerText = 'Chiqish';
+  } else {
+    localStorage.removeItem('phishguard_admin_token');
+    const label = document.getElementById('admin-auth-btn-label');
+    if (label) label.innerText = 'Kirish';
+  }
+}
+
+async function authFetch(url, options = {}) {
+  const token = getAuthToken();
+  const headers = { ...(options.headers || {}) };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  options.headers = headers;
+
+  const res = await fetch(url, options);
+  if (res.status === 401 || res.status === 403) {
+    openAdminAuthModal();
+  }
+  return res;
+}
+
 // Initialization on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
   initDashboard();
 });
 
 function initDashboard() {
+  if (getAuthToken()) {
+    const label = document.getElementById('admin-auth-btn-label');
+    if (label) label.innerText = 'Chiqish';
+  }
   fetchDashboardStats();
   fetchRecentOverviewScans();
 
@@ -111,7 +147,7 @@ function refreshDashboardData() {
  */
 async function fetchDashboardStats(isSilent = false) {
   try {
-    const res = await fetch('/api/v1/admin/stats');
+    const res = await authFetch('/api/v1/admin/stats');
     if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
     const data = await res.json();
     if (!data.success) throw new Error('API reported failure');
@@ -173,7 +209,7 @@ async function fetchRecentOverviewScans() {
   if (!tbody) return;
 
   try {
-    const res = await fetch('/api/v1/admin/scans?page=1&page_size=5');
+    const res = await authFetch('/api/v1/admin/scans?page=1&page_size=5');
     const data = await res.json();
     if (!data.success || !data.items || data.items.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Hozircha tekshirilgan saytlar mavjud emas</td></tr>';
@@ -234,7 +270,7 @@ async function fetchScans() {
   }
 
   try {
-    const res = await fetch(url);
+    const res = await authFetch(url);
     const data = await res.json();
 
     if (!data.success || !data.items || data.items.length === 0) {
@@ -367,7 +403,7 @@ async function openForensicDrawer(urlId) {
   }
 
   try {
-    const res = await fetch(`/api/v1/admin/scans/${urlId}`);
+    const res = await authFetch(`/api/v1/admin/scans/${urlId}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!data.success || !data.scan) throw new Error('Data format error');
@@ -495,7 +531,7 @@ async function triggerDrawerRescan() {
   if (btn) btn.classList.add('loading');
 
   try {
-    const res = await fetch('/api/v1/admin/rescan', {
+    const res = await authFetch('/api/v1/admin/rescan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: currentDrawerUrl }),
@@ -527,7 +563,7 @@ async function fetchAccounts() {
   tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">Hisoblar yuklanmoqda...</td></tr>';
 
   try {
-    const res = await fetch('/api/v1/admin/accounts');
+    const res = await authFetch('/api/v1/admin/accounts');
     const data = await res.json();
 
     if (!data.success || !data.items || data.items.length === 0) {
@@ -581,7 +617,7 @@ async function fetchNotifications() {
   tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Ogohlantirishlar jurnali yuklanmoqda...</td></tr>';
 
   try {
-    const res = await fetch('/api/v1/admin/notifications?limit=50');
+    const res = await authFetch('/api/v1/admin/notifications?limit=50');
     const data = await res.json();
 
     if (!data.success || !data.items || data.items.length === 0) {
@@ -642,7 +678,7 @@ async function executeSandboxScan() {
   if (btn) btn.classList.add('loading');
 
   try {
-    const res = await fetch('/api/v1/admin/rescan', {
+    const res = await authFetch('/api/v1/admin/rescan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: url }),
@@ -913,4 +949,67 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function openAdminAuthModal() {
+  if (getAuthToken()) {
+    setAuthToken('');
+    showToast('Tizimdan chiqildi', 'info');
+    refreshDashboardData();
+    return;
+  }
+  const modal = document.getElementById('admin-auth-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAdminAuthModal() {
+  const modal = document.getElementById('admin-auth-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function submitAdminAuth() {
+  const emailInput = document.getElementById('admin-login-email');
+  const passwordInput = document.getElementById('admin-login-password');
+  const directTokenInput = document.getElementById('admin-token-direct');
+  const directToken = directTokenInput ? directTokenInput.value.trim() : '';
+
+  if (directToken) {
+    setAuthToken(directToken);
+    closeAdminAuthModal();
+    showToast('Admin token saqlandi!', 'success');
+    refreshDashboardData();
+    return;
+  }
+
+  const email = emailInput ? emailInput.value.trim() : '';
+  const password = passwordInput ? passwordInput.value : '';
+
+  if (!email || !password) {
+    showToast('Email va parolni kiriting', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-submit-admin-auth');
+  if (btn) btn.classList.add('loading');
+
+  try {
+    const res = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data?.error?.message || 'Kirishda xatolik');
+    }
+    const token = data.data.access_token;
+    setAuthToken(token);
+    closeAdminAuthModal();
+    showToast('Admin tizimiga muvaffaqiyatli kirildi!', 'success');
+    refreshDashboardData();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    if (btn) btn.classList.remove('loading');
+  }
 }

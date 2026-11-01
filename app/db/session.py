@@ -12,9 +12,10 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
-from app.core.config import get_settings
 import app.db.models  # noqa: F401 (Ensures all ORM models are registered)
+from app.core.config import get_settings
 
 # Initialize Async Engine with connection pooling settings
 engine: AsyncEngine = create_async_engine(
@@ -49,9 +50,6 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
-
-
-from sqlalchemy.pool import NullPool
 
 
 @asynccontextmanager

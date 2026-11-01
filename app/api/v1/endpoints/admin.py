@@ -6,15 +6,16 @@ scanned URLs list with detailed threat forensics, account tracking, and on-deman
 
 import logging
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.deps import get_current_admin_user
 from app.core.config import get_settings
 from app.db.session import get_db_session
 from app.modules.notifications.models import Notification
@@ -26,11 +27,14 @@ from app.modules.threat_intelligence.models import ThreatIntelligence
 from app.modules.threat_intelligence.service import ThreatIntelligenceService
 from app.modules.url_scanning.models import ScannedUrl
 from app.modules.url_scanning.pipeline import canonicalize_url, compute_url_hash
-from app.modules.users.models import User
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
+router = APIRouter(
+    prefix="/admin",
+    tags=["Admin Dashboard"],
+    dependencies=[Depends(get_current_admin_user)],
+)
 
 
 class RescanRequest(BaseModel):
@@ -39,7 +43,7 @@ class RescanRequest(BaseModel):
 
 @router.get("/stats", response_model=dict[str, Any])
 async def get_admin_dashboard_stats(
-    db: AsyncSession = Depends(get_db_session),
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> dict[str, Any]:
     """Returns platform-wide metrics, system health, and threat distribution statistics."""
     settings = get_settings()
@@ -136,11 +140,11 @@ async def get_admin_dashboard_stats(
 
 @router.get("/scans", response_model=dict[str, Any])
 async def get_admin_scans_list(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
     verdict: str | None = Query(None, description="Filter by verdict: PHISHING, SCAM, SUSPICIOUS, BENIGN"),
     search: str | None = Query(None, description="Search domain or URL text"),
-    db: AsyncSession = Depends(get_db_session),
 ) -> dict[str, Any]:
     """Returns paginated list of scanned URLs with threat assessments and risk scores."""
     offset = (page - 1) * page_size
@@ -207,7 +211,7 @@ async def get_admin_scans_list(
 @router.get("/scans/{url_id}", response_model=dict[str, Any])
 async def get_admin_scan_detail(
     url_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db_session),
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> dict[str, Any]:
     """Returns comprehensive forensic details of a single scanned URL for the side panel drawer."""
     stmt = (
@@ -268,7 +272,7 @@ async def get_admin_scan_detail(
 @router.post("/rescan", response_model=dict[str, Any])
 async def rescan_url_now(
     req: RescanRequest,
-    db: AsyncSession = Depends(get_db_session),
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> dict[str, Any]:
     """Forces an immediate fresh rescan of any URL, bypassing cache and updating database."""
     target_url = req.url.strip()
@@ -418,7 +422,7 @@ async def rescan_url_now(
 
 @router.get("/accounts", response_model=dict[str, Any])
 async def get_admin_accounts_list(
-    db: AsyncSession = Depends(get_db_session),
+    db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> dict[str, Any]:
     """Returns connected and revoked Telegram accounts list with metadata."""
     stmt = select(TelegramAccount).options(selectinload(TelegramAccount.chats)).order_by(desc(TelegramAccount.created_at))
@@ -446,8 +450,8 @@ async def get_admin_accounts_list(
 
 @router.get("/notifications", response_model=dict[str, Any])
 async def get_admin_notifications_list(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
     limit: int = Query(50, ge=1, le=200),
-    db: AsyncSession = Depends(get_db_session),
 ) -> dict[str, Any]:
     """Returns list of recent Telegram alert notification attempts."""
     stmt = (

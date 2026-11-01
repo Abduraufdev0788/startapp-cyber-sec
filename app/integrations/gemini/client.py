@@ -83,7 +83,7 @@ Analyze the above evidence and provide your structured security assessment in JS
         )
 
         import asyncio
-        candidate_models = list(dict.fromkeys(["gemini-3.8-flash", self.model, "gemini-3.5-flash"]))
+        candidate_models = list(dict.fromkeys([self.model, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]))
         last_error = None
 
         for candidate_model in candidate_models:

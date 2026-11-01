@@ -23,9 +23,9 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.security import decrypt_field
 from app.db.session import get_standalone_db_session
-from app.modules.users.models import User  # noqa: F401
 from app.modules.telegram_accounts.models import TelegramAccount
 from app.modules.url_scanning.pipeline import canonicalize_url, extract_urls_from_text
+from app.modules.users.models import User  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

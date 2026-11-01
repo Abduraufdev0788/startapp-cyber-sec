@@ -5,6 +5,7 @@ while strictly adhering to SSRF, DoS, and resource-exhaustion safeguards.
 """
 
 import asyncio
+import logging
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
@@ -14,7 +15,6 @@ import httpx
 import whois
 from bs4 import BeautifulSoup
 
-import logging
 from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.modules.url_scanning.ssrf import SSRFBlockedException, validate_url_for_ssrf

@@ -28,6 +28,7 @@ async def test_auth_register_and_login_flow():
     )
 
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     # Mock no existing user on check, then return mock_user
     mock_result_empty = MagicMock()
     mock_result_empty.scalar_one_or_none.return_value = None
@@ -49,6 +50,7 @@ async def test_auth_register_and_login_flow():
             assert reg_data["success"] is True
             assert "access_token" in reg_data["data"]
             assert "refresh_token" in reg_data["data"]
+            refresh_token = reg_data["data"]["refresh_token"]
 
             # 2. Login with correct password
             mock_result_found = MagicMock()
@@ -64,7 +66,17 @@ async def test_auth_register_and_login_flow():
             assert login_data["success"] is True
             assert "access_token" in login_data["data"]
 
-            # 3. Login with wrong password
+            # 3. Refresh token
+            refresh_resp = await client.post(
+                "/api/v1/auth/refresh",
+                json={"refresh_token": refresh_token},
+            )
+            assert refresh_resp.status_code == 200
+            refresh_data = refresh_resp.json()
+            assert refresh_data["success"] is True
+            assert "access_token" in refresh_data["data"]
+
+            # 4. Login with wrong password
             wrong_login = await client.post(
                 "/api/v1/auth/login",
                 json={"email": "test@phishguard.uz", "password": "WrongPassword!"},

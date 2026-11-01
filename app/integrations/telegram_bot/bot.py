@@ -11,13 +11,11 @@ import json
 import logging
 import re
 import secrets
-import uuid
 from typing import Any
 
 import redis.asyncio as aioredis
 from sqlalchemy import select
 from telegram import (
-    CallbackQuery,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,

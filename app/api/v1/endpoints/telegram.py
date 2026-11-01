@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.exceptions import ResourceNotFoundException
+from app.core.rate_limit import rate_limit
 from app.db.session import get_db_session
 from app.modules.audit.service import AuditService
 from app.modules.telegram_accounts.models import TelegramAccount
@@ -38,7 +39,11 @@ class Verify2FARequest(BaseModel):
     password: str = Field(..., description="Telegram 2FA bulutli paroli")
 
 
-@router.post("/auth/send-code", status_code=status.HTTP_200_OK)
+@router.post(
+    "/auth/send-code",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(rate_limit(times=5, seconds=60, key_prefix="rl_tg_send"))],
+)
 async def send_code_endpoint(
     payload: SendCodeRequest,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -51,7 +56,11 @@ async def send_code_endpoint(
     }
 
 
-@router.post("/auth/verify-code", status_code=status.HTTP_200_OK)
+@router.post(
+    "/auth/verify-code",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(rate_limit(times=10, seconds=60, key_prefix="rl_tg_verify"))],
+)
 async def verify_code_endpoint(
     payload: VerifyCodeRequest,
     current_user: Annotated[User, Depends(get_current_user)],

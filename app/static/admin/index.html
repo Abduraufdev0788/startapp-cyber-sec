@@ -98,6 +98,13 @@
         </div>
 
         <div class="topbar-actions">
+          <button class="btn btn-secondary" id="btn-admin-auth" onclick="openAdminAuthModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span id="admin-auth-btn-label">Kirish</span>
+          </button>
           <button class="btn btn-secondary" id="btn-manual-refresh" onclick="refreshDashboardData()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -661,6 +668,29 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeTestModal()">Bekor qilish</button>
         <button class="btn btn-primary" onclick="submitModalScan()">Tekshirish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Authentication Modal -->
+  <div class="modal-overlay" id="admin-auth-modal" style="display: none;">
+    <div class="cyber-modal">
+      <div class="modal-header">
+        <h3>Administrator Kirishi (RBAC)</h3>
+        <button class="modal-close" onclick="closeAdminAuthModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Admin panelga xavfsiz ulanish uchun elektron pochta va parolingizni kiriting:</p>
+        <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem;">
+          <input type="email" id="admin-login-email" class="cyber-input" placeholder="admin@phishguard.uz">
+          <input type="password" id="admin-login-password" class="cyber-input" placeholder="Parol">
+          <div style="font-size: 0.75rem; color: var(--color-text-dim);">Yoki to'g'ridan-to'g'ri JWT Admin Access Token:</div>
+          <input type="text" id="admin-token-direct" class="cyber-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAdminAuthModal()">Bekor qilish</button>
+        <button class="btn btn-primary" id="btn-submit-admin-auth" onclick="submitAdminAuth()">Tasdiqlash & Kirish</button>
       </div>
     </div>
   </div>
