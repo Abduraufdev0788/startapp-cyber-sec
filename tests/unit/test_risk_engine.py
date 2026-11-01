@@ -48,3 +48,20 @@ def test_brand_impersonation_critical_override():
     assert result["risk_score"] >= 80
     assert result["impersonated_brand"] == "Telegram"
     assert any("Brand Impersonation" in r for r in result["reasons"])
+
+
+def test_gambling_casino_detection():
+    """Verifies that predatory gambling, casinos, and slots sites are classified as SCAM with high risk."""
+    evidence = {
+        "domain_age_days": 3000,
+        "ssl_valid": True,
+        "has_password_input": True,
+        "raw_url": "https://uz.1xbet.com/ru/slots",
+        "text_excerpt": "1xBet - stavki na sport, kazino, onlayn slotlar.",
+    }
+    result = RiskEngine.evaluate("uz.1xbet.com", technical_evidence=evidence)
+
+    assert result["verdict"] == "SCAM"
+    assert result["risk_score"] >= 75
+    assert "1xBet" in (result["impersonated_brand"] or "")
+    assert any("qimor" in r.lower() or "kazino" in r.lower() for r in result["reasons"])

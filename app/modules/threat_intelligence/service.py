@@ -14,9 +14,12 @@ import httpx
 import whois
 from bs4 import BeautifulSoup
 
+import logging
 from app.core.config import get_settings
 from app.core.exceptions import AppException
-from app.modules.url_scanning.ssrf import validate_url_for_ssrf
+from app.modules.url_scanning.ssrf import SSRFBlockedException, validate_url_for_ssrf
+
+logger = logging.getLogger(__name__)
 
 
 def _query_dns_records(domain: str) -> dict[str, Any]:
@@ -68,7 +71,22 @@ class ThreatIntelligenceService:
         settings = get_settings()
 
         # 1. SSRF and Domain validation
-        hostname, resolved_ips = validate_url_for_ssrf(canonical_url)
+        is_ssrf_blocked = False
+        dns_failed = False
+        try:
+            hostname, resolved_ips = validate_url_for_ssrf(canonical_url)
+        except SSRFBlockedException as ssrf_err:
+            logger.warning("SSRF blocked URL: %s (%s)", canonical_url, ssrf_err)
+            parsed = urlparse(canonical_url)
+            hostname = parsed.hostname or canonical_url
+            resolved_ips = []
+            is_ssrf_blocked = True
+        except AppException as app_err:
+            logger.warning("DNS/URL validation failed for URL %s: %s", canonical_url, app_err)
+            parsed = urlparse(canonical_url)
+            hostname = parsed.hostname or canonical_url
+            resolved_ips = []
+            dns_failed = True
 
         evidence: dict[str, Any] = {
             "domain": hostname,
@@ -84,7 +102,14 @@ class ThreatIntelligenceService:
             "has_password_input": False,
             "redirect_chain": [],
             "text_excerpt": None,
+            "raw_url": canonical_url,
+            "is_ssrf_blocked": is_ssrf_blocked,
+            "dns_failed": dns_failed,
         }
+
+        # If SSRF is blocked or DNS resolution failed, skip network calls
+        if is_ssrf_blocked or dns_failed:
+            return evidence
 
         # Concurrently gather DNS & WHOIS data
         try:

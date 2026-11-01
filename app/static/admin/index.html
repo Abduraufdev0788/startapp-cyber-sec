@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StartApp PhishGuard — Kiberxavfsizlik Boshqaruv Markazi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/admin/admin.css">
+</head>
+<body class="cyber-theme">
+  <!-- Cyber Background Glow Effects -->
+  <div class="glow-sphere sphere-1"></div>
+  <div class="glow-sphere sphere-2"></div>
+  <div class="grid-overlay"></div>
+
+  <!-- Main Container -->
+  <div class="dashboard-wrapper">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-header">
+        <div class="brand-shield-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">PhishGuard <span>AI</span></div>
+          <div class="brand-subtitle">CyberSec Monitoring Platform</div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" id="nav-tab-overview" onclick="switchTab('overview')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="9"/>
+            <rect x="14" y="3" width="7" height="5"/>
+            <rect x="14" y="12" width="7" height="9"/>
+            <rect x="3" y="16" width="7" height="5"/>
+          </svg>
+          <span>Umumiy Xulosa</span>
+        </button>
+
+        <button class="nav-item" id="nav-tab-scans" onclick="switchTab('scans')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <span>Skanerlangan Saytlar</span>
+          <span class="nav-counter badge-danger" id="nav-threats-badge">0</span>
+        </button>
+
+        <button class="nav-item" id="nav-tab-accounts" onclick="switchTab('accounts')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>Telegram Hisoblar</span>
+        </button>
+
+        <button class="nav-item" id="nav-tab-notifications" onclick="switchTab('notifications')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span>Ogohlantirishlar</span>
+        </button>
+
+        <button class="nav-item" id="nav-tab-sandbox" onclick="switchTab('sandbox')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span>Tezkor Sandbox</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-status-pill">
+          <span class="status-dot pulse-emerald"></span>
+          <span class="status-label">Monitoring: Jonli 24/7</span>
+        </div>
+        <div class="version-tag">Engine v2.4 (Gemini 3.5 AI)</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="page-title-group">
+          <h1 id="page-heading">Boshqaruv Paneli & Tizim Holati</h1>
+          <p id="page-subheading">Telegram xabarlari orqali aniqlangan xavflar va monitoring statistikasi</p>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn btn-secondary" id="btn-manual-refresh" onclick="refreshDashboardData()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            <span>Yangilash</span>
+          </button>
+          <button class="btn btn-primary" onclick="openTestModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <span>Yangi Havolani Tekshirish</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB 1: OVERVIEW SECTION -->
+      <section class="tab-pane active" id="pane-overview">
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-grid">
+          <!-- Card 1: Connected Accounts -->
+          <div class="kpi-card card-emerald">
+            <div class="kpi-icon-wrap bg-emerald-dim">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-value" id="stat-connected-accounts">-</div>
+              <div class="kpi-title">Faol Ulangan Hisoblar</div>
+              <div class="kpi-desc text-emerald">24/7 guruhlarni himoyalovchi akkauntlar</div>
+            </div>
+          </div>
+
+          <!-- Card 2: Disconnected Accounts -->
+          <div class="kpi-card card-crimson">
+            <div class="kpi-icon-wrap bg-crimson-dim">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-value" id="stat-disconnected-accounts">-</div>
+              <div class="kpi-title">Akkauntni Chiqarganlar</div>
+              <div class="kpi-desc text-crimson">Sessiyasi bekor bo'lgan / uzilgan</div>
+            </div>
+          </div>
+
+          <!-- Card 3: Bot Users Start -->
+          <div class="kpi-card card-cyan">
+            <div class="kpi-icon-wrap bg-cyan-dim">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-value" id="stat-bot-users">-</div>
+              <div class="kpi-title">Bot Start Bosganlar</div>
+              <div class="kpi-desc text-cyan">Jami bot foydalanuvchilari</div>
+            </div>
+          </div>
+
+          <!-- Card 4: Scanned URLs -->
+          <div class="kpi-card card-purple">
+            <div class="kpi-icon-wrap bg-purple-dim">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-value" id="stat-total-scans">-</div>
+              <div class="kpi-title">Skanerlangan Havolalar</div>
+              <div class="kpi-desc text-purple" id="stat-threat-ratio">- xavfli / scam aniqlangan</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Heartbeat & Threat Breakdown Grid -->
+        <div class="overview-secondary-grid">
+          <!-- System Daemons Status Widget -->
+          <div class="glass-panel daemon-status-panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                <span>Tizim Xizmatlari va Jarayonlar Holati</span>
+              </div>
+              <span class="badge badge-success" id="overall-health-badge">Barchasi Faol</span>
+            </div>
+
+            <div class="daemon-list" id="daemon-list-container">
+              <div class="daemon-row">
+                <div class="daemon-info">
+                  <div class="daemon-indicator pulse-emerald"></div>
+                  <div>
+                    <div class="daemon-name">Telethon Monitor Daemon</div>
+                    <div class="daemon-sub">Telegram guruh va shaxsiy chatlarni kuzatish</div>
+                  </div>
+                </div>
+                <div class="daemon-badge badge-success" id="daemon-telethon-status">FAOL ISHLAYAPTI</div>
+              </div>
+
+              <div class="daemon-row">
+                <div class="daemon-info">
+                  <div class="daemon-indicator pulse-emerald"></div>
+                  <div>
+                    <div class="daemon-name">Celery Asinxron Worker</div>
+                    <div class="daemon-sub">Queues: celery, scanning, notifications (4x Prefork)</div>
+                  </div>
+                </div>
+                <div class="daemon-badge badge-success" id="daemon-celery-status">FAOL ISHLAYAPTI</div>
+              </div>
+
+              <div class="daemon-row">
+                <div class="daemon-info">
+                  <div class="daemon-indicator pulse-emerald"></div>
+                  <div>
+                    <div class="daemon-name">Telegram Bot Polling Daemon</div>
+                    <div class="daemon-sub">@startapp_cybersec_bot interaktiv va ogohlantirish</div>
+                  </div>
+                </div>
+                <div class="daemon-badge badge-success" id="daemon-bot-status">FAOL ISHLAYAPTI</div>
+              </div>
+
+              <div class="daemon-row">
+                <div class="daemon-info">
+                  <div class="daemon-indicator pulse-emerald"></div>
+                  <div>
+                    <div class="daemon-name">PostgreSQL 16 Database</div>
+                    <div class="daemon-sub">Shifrlangan sessiyalar, skanlar va metama'lumotlar</div>
+                  </div>
+                </div>
+                <div class="daemon-badge badge-success" id="daemon-db-status">ULANGAN</div>
+              </div>
+
+              <div class="daemon-row">
+                <div class="daemon-info">
+                  <div class="daemon-indicator pulse-emerald"></div>
+                  <div>
+                    <div class="daemon-name">Redis In-Memory Broker & Cache</div>
+                    <div class="daemon-sub">Vazifalar navbati, drossellash va PubSub</div>
+                  </div>
+                </div>
+                <div class="daemon-badge badge-success" id="daemon-redis-status">ULANGAN</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Threats Distribution Breakdown Widget -->
+          <div class="glass-panel threat-chart-panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                  <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                </svg>
+                <span>Xavf Toifalari Taqsimoti</span>
+              </div>
+            </div>
+
+            <div class="threat-breakdown-body">
+              <div class="verdict-bar-wrap">
+                <div class="verdict-bar-item">
+                  <div class="v-label-group">
+                    <span class="v-dot dot-phishing"></span>
+                    <span class="v-name">🔴 Fishing (Phishing)</span>
+                    <span class="v-count" id="count-phishing">0</span>
+                  </div>
+                  <div class="v-progress-bg">
+                    <div class="v-progress-fill fill-phishing" id="bar-phishing" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <div class="verdict-bar-item">
+                  <div class="v-label-group">
+                    <span class="v-dot dot-scam"></span>
+                    <span class="v-name">🟠 Firibgarlik & Kazino (Scam)</span>
+                    <span class="v-count" id="count-scam">0</span>
+                  </div>
+                  <div class="v-progress-bg">
+                    <div class="v-progress-fill fill-scam" id="bar-scam" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <div class="verdict-bar-item">
+                  <div class="v-label-group">
+                    <span class="v-dot dot-suspicious"></span>
+                    <span class="v-name">🟡 Shubhali (Suspicious)</span>
+                    <span class="v-count" id="count-suspicious">0</span>
+                  </div>
+                  <div class="v-progress-bg">
+                    <div class="v-progress-fill fill-suspicious" id="bar-suspicious" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <div class="verdict-bar-item">
+                  <div class="v-label-group">
+                    <span class="v-dot dot-benign"></span>
+                    <span class="v-name">🟢 Xavfsiz / Toza (Benign)</span>
+                    <span class="v-count" id="count-benign">0</span>
+                  </div>
+                  <div class="v-progress-bg">
+                    <div class="v-progress-fill fill-benign" id="bar-benign" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="notifications-summary-box">
+                <div class="notif-stat-item">
+                  <div class="ns-number text-emerald" id="notif-sent-count">-</div>
+                  <div class="ns-label">Yetkazilgan Xabarlar</div>
+                </div>
+                <div class="notif-stat-item">
+                  <div class="ns-number text-amber" id="notif-throttled-count">-</div>
+                  <div class="ns-label">Bloklangan Spam (Throttle)</div>
+                </div>
+                <div class="notif-stat-item">
+                  <div class="ns-number text-cyan" id="monitored-chats-count">-</div>
+                  <div class="ns-label">Kuzatilayotgan Guruhlar</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Scans Mini-Table in Overview -->
+        <div class="glass-panel" style="margin-top: 1.5rem;">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span>So'nggi Aniqlangan Havolalar</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="switchTab('scans')">Barchasini Ko'rish →</button>
+          </div>
+          <div class="table-container">
+            <table class="cyber-table">
+              <thead>
+                <tr>
+                  <th>Domen / Havola</th>
+                  <th>Xavf Darajasi</th>
+                  <th>Toifa</th>
+                  <th>Nishon Brend</th>
+                  <th>Skanerlagan Dvigatel</th>
+                  <th>Sana / Vaqt</th>
+                  <th style="text-align: right;">Batafsil</th>
+                </tr>
+              </thead>
+              <tbody id="overview-recent-scans-tbody">
+                <tr><td colspan="7" class="loading-cell">Ma'lumotlar yuklanmoqda...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: SCANNED SITES FULL TABLE -->
+      <section class="tab-pane" id="pane-scans">
+        <div class="glass-panel">
+          <!-- Filters & Search Toolbar -->
+          <div class="table-toolbar">
+            <div class="search-input-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" id="scan-search-input" placeholder="Domen yoki havola bo'yicha qidirish..." oninput="debounceScanSearch()">
+            </div>
+
+            <div class="filter-chips-wrap">
+              <button class="filter-chip active" data-verdict="" onclick="setScanFilter(this, '')">Barchasi</button>
+              <button class="filter-chip chip-phishing" data-verdict="PHISHING" onclick="setScanFilter(this, 'PHISHING')">🔴 Phishing</button>
+              <button class="filter-chip chip-scam" data-verdict="SCAM" onclick="setScanFilter(this, 'SCAM')">🟠 Scam & Qimor</button>
+              <button class="filter-chip chip-suspicious" data-verdict="SUSPICIOUS" onclick="setScanFilter(this, 'SUSPICIOUS')">🟡 Shubhali</button>
+              <button class="filter-chip chip-benign" data-verdict="BENIGN" onclick="setScanFilter(this, 'BENIGN')">🟢 Xavfsiz</button>
+            </div>
+          </div>
+
+          <!-- Scans Table -->
+          <div class="table-container">
+            <table class="cyber-table">
+              <thead>
+                <tr>
+                  <th>Domen & Manzil</th>
+                  <th>Xavf Bali</th>
+                  <th>Xulosa</th>
+                  <th>Nishon Brend</th>
+                  <th>SSL & Texnik Holat</th>
+                  <th>Sana</th>
+                  <th style="text-align: right;">Harakat</th>
+                </tr>
+              </thead>
+              <tbody id="full-scans-tbody">
+                <tr><td colspan="7" class="loading-cell">Saytlar ro'yxati yuklanmoqda...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination-footer">
+            <div class="pagination-info" id="pagination-info-text">Ko'rsatilmoqda: 0 dan 0 gacha</div>
+            <div class="pagination-controls">
+              <button class="btn btn-secondary btn-sm" id="btn-prev-page" onclick="changeScanPage(-1)" disabled>« Oldingisi</button>
+              <span class="page-number-display" id="page-number-display">1 / 1</span>
+              <button class="btn btn-secondary btn-sm" id="btn-next-page" onclick="changeScanPage(1)" disabled>Keyingisi »</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: TELEGRAM ACCOUNTS -->
+      <section class="tab-pane" id="pane-accounts">
+        <div class="glass-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+              </svg>
+              <span>Telegram Monitoring Hisoblari</span>
+            </div>
+            <div class="badge badge-info" id="accounts-count-badge">Jami: 0 hisob</div>
+          </div>
+
+          <div class="table-container">
+            <table class="cyber-table">
+              <thead>
+                <tr>
+                  <th>Telegram User ID</th>
+                  <th>Telefon Hash</th>
+                  <th>Ulanish Holati</th>
+                  <th>Autentifikatsiya</th>
+                  <th>Kuzatilayotgan Guruhlar</th>
+                  <th>Oxirgi Ulanish</th>
+                  <th>Qo'shilgan Sana</th>
+                </tr>
+              </thead>
+              <tbody id="accounts-tbody">
+                <tr><td colspan="7" class="loading-cell">Hisoblar yuklanmoqda...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: NOTIFICATIONS LOG -->
+      <section class="tab-pane" id="pane-notifications">
+        <div class="glass-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span>Yuborilgan Ogohlantirishlar Jurnali (Alert Logs)</span>
+            </div>
+            <div class="badge badge-info" id="notifications-count-badge">Oxirgi 50 ta</div>
+          </div>
+
+          <div class="table-container">
+            <table class="cyber-table">
+              <thead>
+                <tr>
+                  <th>Qabul Qiluvchi (Chat ID)</th>
+                  <th>Havola / Domen</th>
+                  <th>Ogohlantirish Toifasi</th>
+                  <th>Yetkazilish Holati</th>
+                  <th>Urinishlar</th>
+                  <th>Yuborilgan Vaqt</th>
+                </tr>
+              </thead>
+              <tbody id="notifications-tbody">
+                <tr><td colspan="6" class="loading-cell">Ogohlantirishlar jurnali yuklanmoqda...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: LIVE URL SANDBOX -->
+      <section class="tab-pane" id="pane-sandbox">
+        <div class="glass-panel sandbox-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+              <span>Jonli Havolani Tekshirish va Kiber Razvedka Sandboxi</span>
+            </div>
+          </div>
+
+          <div class="sandbox-form-wrap">
+            <p class="sandbox-desc">
+              Istalgan yangi, shubhali yoki qimor havolasini kiriting. Tizim DNS, SSL, HTML formalarini o'qib, Gemini 3.5 AI orqali real vaqtda to'liq forensic ekspertiza xulosasini beradi.
+            </p>
+            <div class="sandbox-input-group">
+              <input type="url" id="sandbox-url-input" class="cyber-input" placeholder="https://shubhali-sayt.xyz/login yoki 1xbet.com..." required>
+              <button class="btn btn-primary" id="btn-run-sandbox" onclick="executeSandboxScan()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <span>Hozir Tahlil Qilish</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Result Container -->
+          <div class="sandbox-result-wrap" id="sandbox-result-box" style="display: none;">
+            <!-- Dynamically injected -->
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- FORENSIC SLIDE-OVER SIDE PANEL (DRAWER) -->
+  <div class="drawer-overlay" id="drawer-overlay" onclick="closeForensicDrawer()"></div>
+  <aside class="forensic-drawer" id="forensic-drawer">
+    <div class="drawer-header">
+      <div class="dh-title-group">
+        <div class="dh-badge" id="drawer-verdict-badge">TALIL QILINMOQDA</div>
+        <h2 class="dh-domain" id="drawer-domain-name">misol.uz</h2>
+      </div>
+      <button class="drawer-close-btn" onclick="closeForensicDrawer()" title="Yopish">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="drawer-body" id="drawer-body-content">
+      <!-- Risk Score Gauge Card -->
+      <div class="drawer-card risk-score-card">
+        <div class="rsc-header">
+          <span>Xavf Darajasi Bahosi</span>
+          <span class="rsc-score" id="drawer-risk-score-number">0 / 100</span>
+        </div>
+        <div class="rsc-meter-bg">
+          <div class="rsc-meter-fill" id="drawer-risk-meter-fill" style="width: 0%;"></div>
+        </div>
+        <div class="rsc-meta">
+          <span id="drawer-impersonated-brand-tag">Nishon: Aniqlanmadi</span>
+          <span id="drawer-evaluator-tag">Model: Gemini 3.5 Flash</span>
+        </div>
+      </div>
+
+      <!-- Why is it categorized like this? (Forensic Reasons) -->
+      <div class="drawer-section">
+        <h3 class="section-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>Nega bunday xulosa berildi? (Asosiy Sabablar)</span>
+        </h3>
+        <div class="reasons-list" id="drawer-reasons-list">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <!-- Technical Evidence Grid -->
+      <div class="drawer-section">
+        <h3 class="section-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <span>Texnik Razvedka Dalillari</span>
+        </h3>
+        <div class="tech-grid" id="drawer-tech-grid">
+          <div class="tech-item">
+            <div class="ti-label">Domen Yoshi</div>
+            <div class="ti-value" id="drawer-tech-domain-age">- kun</div>
+          </div>
+          <div class="tech-item">
+            <div class="ti-label">SSL Sertifikati</div>
+            <div class="ti-value" id="drawer-tech-ssl">Mavjud emas</div>
+          </div>
+          <div class="tech-item">
+            <div class="ti-label">HTTP Status</div>
+            <div class="ti-value" id="drawer-tech-http-status">-</div>
+          </div>
+          <div class="tech-item">
+            <div class="ti-label">Javob Tezligi</div>
+            <div class="ti-value" id="drawer-tech-latency">- ms</div>
+          </div>
+          <div class="tech-item">
+            <div class="ti-label">Login/Parol Formasi</div>
+            <div class="ti-value" id="drawer-tech-login-form">Aniqlanmadi</div>
+          </div>
+          <div class="tech-item">
+            <div class="ti-label">Qayta Yo'naltirish</div>
+            <div class="ti-value" id="drawer-tech-redirects">To'g'ridan-to'g'ri</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DNS Records Inspection -->
+      <div class="drawer-section">
+        <h3 class="section-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+          <span>DNS Server Yozuvlari</span>
+        </h3>
+        <pre class="code-box" id="drawer-dns-records">DNS yozuvlari mavjud emas</pre>
+      </div>
+
+      <!-- Page Text Excerpt -->
+      <div class="drawer-section">
+        <h3 class="section-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span>Sayt Matnidan Parcha (HTML Text)</span>
+        </h3>
+        <div class="text-excerpt-box" id="drawer-text-excerpt">Matn yuklanmadi</div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="drawer-actions">
+        <button class="btn btn-primary btn-block" id="btn-drawer-rescan" onclick="triggerDrawerRescan()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          <span>Qayta Skanerlash (Bypass Cache)</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Quick Test Modal -->
+  <div class="modal-overlay" id="quick-test-modal" style="display: none;">
+    <div class="cyber-modal">
+      <div class="modal-header">
+        <h3>Tezkor Havolani Tekshirish</h3>
+        <button class="modal-close" onclick="closeTestModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Istalgan veb-havolani kiriting va darhol to'liq hisobot oling:</p>
+        <input type="url" id="modal-url-input" class="cyber-input" placeholder="https://example.com..." style="width: 100%; margin-top: 0.75rem;">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeTestModal()">Bekor qilish</button>
+        <button class="btn btn-primary" onclick="submitModalScan()">Tekshirish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/static/admin/admin.js"></script>
+</body>
+</html>

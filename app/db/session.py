@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import get_settings
+import app.db.models  # noqa: F401 (Ensures all ORM models are registered)
 
 # Initialize Async Engine with connection pooling settings
 engine: AsyncEngine = create_async_engine(
@@ -50,15 +51,28 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+from sqlalchemy.pool import NullPool
+
+
 @asynccontextmanager
 async def get_standalone_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Standalone context manager for background tasks, CLI scripts, and Celery workers.
-    Usage:
-        async with get_standalone_db_session() as session:
-            ...
+    Uses NullPool and disposes the engine per-call to avoid asyncpg 'Future attached to different loop' errors.
     """
-    async with AsyncSessionFactory() as session:
+    standalone_engine = create_async_engine(
+        get_settings().DATABASE_URL,
+        poolclass=NullPool,
+        echo=get_settings().DEBUG,
+    )
+    factory = async_sessionmaker(
+        bind=standalone_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
+    async with factory() as session:
         try:
             yield session
             await session.commit()
@@ -67,3 +81,4 @@ async def get_standalone_db_session() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+            await standalone_engine.dispose()

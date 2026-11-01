@@ -16,6 +16,9 @@ from app.core.security import decode_access_token
 from app.db.session import get_db_session
 from app.modules.users.models import User
 
+# Alias for standard dependency injection
+get_db = get_db_session
+
 security_bearer = HTTPBearer(auto_error=True)
 
 

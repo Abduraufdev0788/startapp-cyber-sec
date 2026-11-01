@@ -49,7 +49,7 @@ class Settings(BaseSettings):
 
     # AI Provider (Google Gemini)
     GEMINI_API_KEY: str = Field(..., description="Google Gemini API Key")
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash"
 
     # Scanner & Network Constraints (SSRF & DoS mitigation)
     SCANNER_CONNECT_TIMEOUT_SECONDS: int = 5

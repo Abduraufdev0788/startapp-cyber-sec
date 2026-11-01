@@ -136,55 +136,70 @@ def scan_url_background(
                 db.add(new_assessment)
                 await db.commit()
 
-            # 6. If high threat (risk_score >= 60), check Redis deduplication & throttle
-            if risk_score >= 60:
-                import redis.asyncio as aioredis
+            # 6. Notify user of EVERY link with clear evaluation (Yaxshi / Shubhali / Yomon)
+            import redis.asyncio as aioredis
+            from app.core.config import get_settings
 
-                from app.core.config import get_settings
+            if risk_score >= 80:
+                alert_type = "CRITICAL_PHISHING"
+            elif risk_score >= 60:
+                alert_type = "SCAM_WARNING"
+            elif risk_score >= 40:
+                alert_type = "SUSPICIOUS_LINK"
+            else:
+                alert_type = "SAFE_LINK"
 
-                alert_type = "CRITICAL_PHISHING" if risk_score >= 80 else "SCAM_WARNING"
-                settings = get_settings()
+            settings = get_settings()
 
-                is_throttled = False
-                redis_conn = None
-                try:
-                    redis_conn = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-                    dedup_key = f"alert_sent:{user_id}:{url_hash}"
-                    already_sent = await redis_conn.get(dedup_key)
-                    if already_sent:
-                        is_throttled = True
-                        logger.info("Alert throttled for user %s and URL %s (sent within last hour)", user_id, url_hash)
-                    else:
-                        await redis_conn.set(dedup_key, "1", ex=3600)  # 1 hour TTL
-                except Exception as redis_err:
-                    logger.warning("Redis check failed in scan task: %s", redis_err)
-                finally:
-                    if redis_conn:
-                        await redis_conn.aclose()
+            is_throttled = False
+            redis_conn = None
+            try:
+                redis_conn = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+                # Deduplicate exact same link in the same chat within 60 seconds to prevent rapid spam loops
+                dedup_key = f"alert_sent:{user_id}:{chat_id}:{url_hash}"
+                already_sent = await redis_conn.get(dedup_key)
+                if already_sent:
+                    is_throttled = True
+                    logger.info("Alert throttled for user %s, chat %s and URL %s (sent within last 60s)", user_id, chat_id, url_hash)
+                else:
+                    await redis_conn.set(dedup_key, "1", ex=60)
+            except Exception as redis_err:
+                logger.warning("Redis check failed in scan task: %s", redis_err)
+            finally:
+                if redis_conn:
+                    await redis_conn.aclose()
 
-                notif = Notification(
-                    user_id=user_id,
-                    url_id=scanned_record.id,
-                    telegram_chat_id=chat_id,
-                    alert_type=alert_type,
-                    delivery_status="THROTTLED" if is_throttled else "PENDING",
-                    is_dismissed=False,  # Active alert stays in app until dismissed
+            notif = Notification(
+                user_id=user_id,
+                url_id=scanned_record.id,
+                telegram_chat_id=chat_id,
+                alert_type=alert_type,
+                delivery_status="THROTTLED" if is_throttled else "PENDING",
+                is_dismissed=False,  # Active alert stays in app until dismissed
+            )
+            db.add(notif)
+            await db.commit()
+
+            # Dispatch Telegram alert via bot only if not throttled
+            if not is_throttled:
+                recipient_id = user_telegram_id
+                if recipient_id is None:
+                    from app.modules.telegram_accounts.models import TelegramAccount
+                    acc_stmt = select(TelegramAccount.telegram_user_id).where(TelegramAccount.user_id == user_id)
+                    acc_res = await db.execute(acc_stmt)
+                    recipient_id = acc_res.scalar_one_or_none() or chat_id
+
+                # Safe URLs are displayed directly; suspicious/phishing URLs are defanged to prevent accidental clicks
+                url_display = defang_url(canonical_url) if risk_score >= 40 else canonical_url
+                dispatch_alert_task.delay(
+                    alert_id=str(notif.id),
+                    chat_id=recipient_id,
+                    chat_title=chat_title,
+                    defanged_url=url_display,
+                    risk_score=risk_score,
+                    impersonated_brand=impersonated_brand,
+                    reasons=reasons,
                 )
-                db.add(notif)
-                await db.commit()
-
-                # Dispatch Telegram alert via bot only if not throttled
-                if not is_throttled:
-                    recipient_id = user_telegram_id if user_telegram_id is not None else chat_id
-                    dispatch_alert_task.delay(
-                        alert_id=str(notif.id),
-                        chat_id=recipient_id,
-                        chat_title=chat_title,
-                        defanged_url=defang_url(canonical_url),
-                        risk_score=risk_score,
-                        impersonated_brand=impersonated_brand,
-                        reasons=reasons,
-                    )
 
             return {
                 "verdict": verdict,

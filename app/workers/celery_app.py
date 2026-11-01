@@ -13,6 +13,10 @@ celery_app = Celery(
     "phishing_detector_workers",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
+    include=[
+        "app.workers.tasks.scan",
+        "app.workers.tasks.notify",
+    ],
 )
 
 celery_app.conf.update(

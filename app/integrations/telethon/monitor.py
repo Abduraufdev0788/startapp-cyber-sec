@@ -23,6 +23,7 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.security import decrypt_field
 from app.db.session import get_standalone_db_session
+from app.modules.users.models import User  # noqa: F401
 from app.modules.telegram_accounts.models import TelegramAccount
 from app.modules.url_scanning.pipeline import canonicalize_url, extract_urls_from_text
 
@@ -149,6 +150,17 @@ class TelethonMonitorManager:
                 await client.disconnect()
                 return False
 
+            me = await client.get_me()
+            try:
+                dialogs = await client.get_dialogs(limit=50)
+                logger.info(
+                    "Warmed up entity cache for account @%s with %d dialogs.",
+                    getattr(me, "username", "N/A"),
+                    len(dialogs),
+                )
+            except Exception as dialog_err:
+                logger.warning("Could not warm up dialogs for account %s: %s", account.id, dialog_err)
+
             self._register_handlers(client, account.user_id, account.telegram_user_id)
             self.active_clients[account_id_str] = client
 
@@ -156,7 +168,6 @@ class TelethonMonitorManager:
             task = asyncio.create_task(self._run_client(client, account.id))
             self.client_tasks[account_id_str] = task
 
-            me = await client.get_me()
             logger.info(
                 "Started monitor for account: @%s (TG ID: %s, Account ID: %s)",
                 getattr(me, "username", "N/A"),
@@ -279,12 +290,35 @@ class TelethonMonitorManager:
             if not event.message or not (event.message.message or event.message.entities):
                 return
 
+            # Exclude messages sent by or chatting with our security bot to prevent recursive alerts
+            bot_token = self.settings.TELEGRAM_BOT_TOKEN
+            bot_id = int(bot_token.split(":")[0]) if bot_token and ":" in bot_token else None
+            sender_id = getattr(event, "sender_id", None)
+            if bot_id and (event.chat_id == bot_id or sender_id == bot_id):
+                return
+
+            chat = await event.get_chat()
+            chat_title = getattr(chat, "title", None)
+            if not chat_title:
+                fn = getattr(chat, "first_name", "") or ""
+                ln = getattr(chat, "last_name", "") or ""
+                full_name = f"{fn} {ln}".strip()
+                chat_title = full_name if full_name else getattr(chat, "username", "Shaxsiy chat")
+
+            snippet = (event.message.message or "").replace("\n", " ")[:60]
+            logger.info(
+                "Telethon intercepted %s message in '%s' (chat_id=%s, out=%s): '%s'",
+                event_type,
+                chat_title,
+                event.chat_id,
+                getattr(event, "out", False),
+                snippet,
+            )
+
             urls = extract_all_urls_from_event(event)
             if not urls:
                 return  # Skip messages without any URLs
 
-            chat = await event.get_chat()
-            chat_title = getattr(chat, "title", getattr(chat, "username", "Private Chat"))
             logger.info(
                 "Detected %d URL(s) in %s message in chat '%s' for user %s (TG: %s): %s",
                 len(urls),

@@ -24,9 +24,9 @@ STRIPPED_QUERY_PARAMS = {
     "_gl",
 }
 
-# Robust regex for detecting URLs in raw text when entities are absent
+# Robust regex for detecting URLs and domains in raw text when entities are absent
 URL_REGEX = re.compile(
-    r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))",
+    r"(?i)\b(?:https?://[^\s()<>]+|(?:www\d{0,3}[.]|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:[a-z]{2,10}))(?:/[^\s()<>]*)?)(?<![.,?!;:«»\"\'\(\)\[\]{}])",
     re.IGNORECASE,
 )
 
@@ -39,6 +39,9 @@ def extract_urls_from_text(text: str) -> list[str]:
     urls: list[str] = []
     for match in matches:
         raw_match = match[0] if isinstance(match, tuple) else match
+        raw_match = raw_match.strip(".,?!;:«»\"'()[]{}")
+        if not raw_match:
+            continue
         if not raw_match.startswith(("http://", "https://")):
             raw_match = f"https://{raw_match}"
         urls.append(raw_match)
