@@ -48,7 +48,9 @@ sudo ufw allow 8000/tcp
 Endi brauzerda to'g'ridan-to'g'ri serveringiz IP manzilini oching:
 `http://<SERVER_IP>/`
 
-Siz darhol **PhishGuard Kiberxavfsizlik Login Sahifasi**ga yo'naltirilasiz:
-- **Email:** `admin@phishguard.uz`
-- **Parol:** `AdminPhishGuard2025!`
+Siz darhol **PhishGuard Kiberxavfsizlik Login Sahifasi**ga yo'naltirilasiz.
+Administrator hisobingiz orqali tizimga kiring. Agar admin akkauntingiz bo'lmasa, uni `.env` dagi `INITIAL_ADMIN_EMAIL` va `INITIAL_ADMIN_PASSWORD` orqali yoki quyidagi buyruq orqali yarating:
+```bash
+python -m scripts.create_admin --email sizning_emailingiz@example.com --password SizningMaxfiyParolingiz123!
+```
 

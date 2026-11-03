@@ -29,14 +29,14 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     JWT_ALGORITHM: str = "HS256"
 
-    # Initial Administrator Provisioning
-    INITIAL_ADMIN_EMAIL: str = Field(
-        default="admin@phishguard.uz",
-        description="Default administrator email seeded on first platform initialization",
+    # Initial Administrator Provisioning (Optional via environment)
+    INITIAL_ADMIN_EMAIL: str | None = Field(
+        default=None,
+        description="Optional administrator email seeded on first platform initialization from environment",
     )
-    INITIAL_ADMIN_PASSWORD: str = Field(
-        default="AdminPhishGuard2025!",
-        description="Default administrator password (min 8 chars)",
+    INITIAL_ADMIN_PASSWORD: str | None = Field(
+        default=None,
+        description="Optional administrator password (min 8 chars) from environment",
     )
 
     # CORS Configuration

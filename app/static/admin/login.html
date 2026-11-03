@@ -266,49 +266,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Quick Demo / Initial Admin Hint Box */
-    .demo-hint-card {
-      margin-top: 1.75rem;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px dashed rgba(255, 255, 255, 0.12);
-      border-radius: var(--radius-md);
-      padding: 0.85rem 1rem;
-      text-align: left;
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .demo-hint-card:hover {
-      background: rgba(6, 182, 212, 0.05);
-      border-color: rgba(6, 182, 212, 0.3);
-    }
-
-    .demo-hint-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.35rem;
-      font-weight: 600;
-      color: #cbd5e1;
-    }
-
-    .demo-hint-badge {
-      font-size: 0.7rem;
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      padding: 0.15rem 0.5rem;
-      border-radius: 12px;
-      font-weight: 500;
-    }
-
-    .demo-credentials {
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: #94a3b8;
-    }
-
     .login-footer-security {
       text-align: center;
       margin-top: 1.75rem;
@@ -417,17 +374,7 @@
           </button>
         </form>
 
-        <!-- Quick Demo / Initial Admin Auto-Fill Card -->
-        <div class="demo-hint-card" onclick="quickFillCredentials()" title="Bir marta bosishda avtomatik to'ldirish">
-          <div class="demo-hint-header">
-            <span>⚡ Standart Administrator Hisobi:</span>
-            <span class="demo-hint-badge">Bir bosishda to'ldirish</span>
-          </div>
-          <div class="demo-credentials">
-            Email: <strong style="color: #38bdf8;">admin@phishguard.uz</strong><br>
-            Parol: <strong style="color: #38bdf8;">AdminPhishGuard2025!</strong>
-          </div>
-        </div>
+        <!-- Quick Demo / Initial Admin Auto-Fill Card removed for security -->
 
         <!-- Security Footer -->
         <div class="login-footer-security">
@@ -482,13 +429,6 @@
           <circle cx="12" cy="12" r="3"/>
         `;
       }
-    }
-
-    // Quick-Fill credentials handler
-    function quickFillCredentials() {
-      document.getElementById('login-email').value = 'admin@phishguard.uz';
-      document.getElementById('login-password').value = 'AdminPhishGuard2025!';
-      showAlert("Standart administrator ma'lumotlari kiritildi. 'Tizimga Kirish' tugmasini bosing.", 'info');
     }
 
     // Alert Banner Manager

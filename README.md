@@ -311,8 +311,8 @@ python -m app.integrations.telethon.monitor
 Once the API service is running, access the following interfaces:
 
 * **Admin Login Sahifasi:** [http://localhost:8000/login](http://localhost:8000/login) (yoki `http://<SERVER_IP>:8000/login` yoki Nginx orqali `http://<SERVER_IP>/login`)
-  * **Standart Administrator:** `admin@phishguard.uz`
-  * **Standart Parol:** `AdminPhishGuard2025!` (yoki `.env` dagi `INITIAL_ADMIN_PASSWORD`)
+  * Tizimga o'zingizning administrator emailingiz va parolingiz orqali kirasiz.
+  * Yangi admin yaratish: `python -m scripts.create_admin --email admin@example.com --password YourSecurePassword123!` (yoki `.env` dagi `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`).
   * Muvaffaqiyatli kirilgach, JWT token avtomatik saqlanib, to'g'ridan-to'g'ri boshqaruv paneliga yo'naltiriladi.
 * **Admin Web Dashboard:** [http://localhost:8000/admin](http://localhost:8000/admin)
   * Real vaqt rejimida skanerlangan fishing va firibgar saytlar, jonli hisobotlar, Telegram hisoblari va bot ogohlantirishlari monitoringi.
