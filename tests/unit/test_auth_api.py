@@ -112,3 +112,33 @@ async def test_auth_me_endpoint():
             assert data["role"] == "ANALYST"
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_frontend_routes_serving():
+    """Tests that /login, /admin, /, and static files are served properly."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
+        # 1. Root redirect to /login
+        root_resp = await client.get("/")
+        assert root_resp.status_code == 302
+        assert root_resp.headers["location"] == "/login"
+
+        # 2. Login page HTML serving
+        login_resp = await client.get("/login")
+        assert login_resp.status_code == 200
+        assert "text/html" in login_resp.headers["content-type"]
+        assert "PhishGuard" in login_resp.text
+        assert "Tizimga Kirish" in login_resp.text
+
+        # 3. Admin dashboard HTML serving
+        admin_resp = await client.get("/admin")
+        assert admin_resp.status_code == 200
+        assert "text/html" in admin_resp.headers["content-type"]
+        assert "StartApp PhishGuard" in admin_resp.text
+
+        # 4. Static assets serving
+        css_resp = await client.get("/static/admin/admin.css")
+        assert css_resp.status_code == 200
+        assert "text/css" in css_resp.headers["content-type"]
+

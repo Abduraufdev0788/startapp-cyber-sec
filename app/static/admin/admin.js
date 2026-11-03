@@ -21,27 +21,63 @@ function getAuthToken() {
 function setAuthToken(token) {
   if (token) {
     localStorage.setItem('phishguard_admin_token', token);
-    const label = document.getElementById('admin-auth-btn-label');
-    if (label) label.innerText = 'Chiqish';
   } else {
     localStorage.removeItem('phishguard_admin_token');
-    const label = document.getElementById('admin-auth-btn-label');
-    if (label) label.innerText = 'Kirish';
   }
 }
 
+function logoutAdmin() {
+  localStorage.removeItem('phishguard_admin_token');
+  localStorage.removeItem('phishguard_refresh_token');
+  localStorage.removeItem('phishguard_user_email');
+  localStorage.removeItem('phishguard_user_role');
+  window.location.replace('/login');
+}
+
 async function authFetch(url, options = {}) {
-  const token = getAuthToken();
-  const headers = { ...(options.headers || {}) };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  let token = getAuthToken();
+  if (!token) {
+    window.location.replace('/login');
+    return new Response(null, { status: 401 });
   }
+
+  const headers = { ...(options.headers || {}) };
+  headers['Authorization'] = `Bearer ${token}`;
   options.headers = headers;
 
-  const res = await fetch(url, options);
-  if (res.status === 401 || res.status === 403) {
-    openAdminAuthModal();
+  let res = await fetch(url, options);
+
+  // If unauthorized, attempt seamless token refresh
+  if (res.status === 401) {
+    const refreshToken = localStorage.getItem('phishguard_refresh_token');
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch('/api/v1/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        const refreshData = await refreshRes.json();
+        if (refreshRes.ok && refreshData.success && refreshData.data?.access_token) {
+          token = refreshData.data.access_token;
+          localStorage.setItem('phishguard_admin_token', token);
+          if (refreshData.data.refresh_token) {
+            localStorage.setItem('phishguard_refresh_token', refreshData.data.refresh_token);
+          }
+          headers['Authorization'] = `Bearer ${token}`;
+          options.headers = headers;
+          res = await fetch(url, options);
+          return res;
+        }
+      } catch (err) {
+        console.warn('Silent refresh failed:', err);
+      }
+    }
+
+    // Refresh failed or no refresh token: redirect to login
+    logoutAdmin();
   }
+
   return res;
 }
 
@@ -51,10 +87,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initDashboard() {
-  if (getAuthToken()) {
-    const label = document.getElementById('admin-auth-btn-label');
-    if (label) label.innerText = 'Chiqish';
+  const token = getAuthToken();
+  if (!token) {
+    window.location.replace('/login');
+    return;
   }
+
+  // Populate logged-in user identity in top bar
+  const email = localStorage.getItem('phishguard_user_email') || 'admin@phishguard.uz';
+  const role = localStorage.getItem('phishguard_user_role') || 'ADMIN';
+  const emailEl = document.getElementById('topbar-admin-email');
+  const roleEl = document.getElementById('topbar-admin-role');
+  if (emailEl) emailEl.innerText = email;
+  if (roleEl) roleEl.innerText = role;
+
   fetchDashboardStats();
   fetchRecentOverviewScans();
 

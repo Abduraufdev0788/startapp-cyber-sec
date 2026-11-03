@@ -24,6 +24,7 @@ import app.modules.users.models  # noqa: F401
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import AppException
+from app.core.lifecycle import seed_initial_admin
 from app.core.logging import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     setup_logging(settings.LOG_LEVEL)
     logger.info("Starting %s in %s mode...", settings.PROJECT_NAME, settings.ENVIRONMENT)
+
+    # Automatic initial administrator provisioning if none exists
+    await seed_initial_admin()
+
     yield
     logger.info("Shutting down %s...", settings.PROJECT_NAME)
 
@@ -54,7 +59,7 @@ def create_application() -> FastAPI:
     # CORS configuration
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.ENVIRONMENT == "development" else [],
+        allow_origins=settings.CORS_ORIGINS if settings.ENVIRONMENT != "development" else ["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -116,29 +121,45 @@ def create_application() -> FastAPI:
     # Mount API v1
     app.include_router(api_router, prefix="/api")
 
-    # Mount static assets and Admin Web Dashboard
+    # Mount static assets and Web Dashboards
+    import mimetypes
     import os
 
     from fastapi.responses import FileResponse, RedirectResponse
     from fastapi.staticfiles import StaticFiles
 
+    # Ensure reliable MIME types on all Linux server distributions
+    mimetypes.add_type("application/javascript", ".js")
+    mimetypes.add_type("text/css", ".css")
+    mimetypes.add_type("text/html", ".html")
+
     static_dir = os.path.join(os.path.dirname(__file__), "static")
     if os.path.exists(static_dir):
-        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+        app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")
 
-    admin_index_file = os.path.join(static_dir, "admin", "index.html")
-    admin_index_exists = os.path.exists(admin_index_file)
+    admin_dir = os.path.join(static_dir, "admin")
+    admin_index_file = os.path.join(admin_dir, "index.html")
+    admin_login_file = os.path.join(admin_dir, "login.html")
+
+    @app.get("/login", include_in_schema=False)
+    @app.get("/login/", include_in_schema=False)
+    async def login_page():
+        if os.path.exists(admin_login_file):
+            return FileResponse(admin_login_file, media_type="text/html")
+        return JSONResponse(status_code=404, content={"message": "Login page frontend not found"})
 
     @app.get("/admin", include_in_schema=False)
     @app.get("/admin/", include_in_schema=False)
+    @app.get("/dashboard", include_in_schema=False)
+    @app.get("/dashboard/", include_in_schema=False)
     async def admin_dashboard():
-        if admin_index_exists:
-            return FileResponse(admin_index_file)
+        if os.path.exists(admin_index_file):
+            return FileResponse(admin_index_file, media_type="text/html")
         return JSONResponse(status_code=404, content={"message": "Admin dashboard frontend not found"})
 
     @app.get("/", include_in_schema=False)
     async def root_redirect():
-        return RedirectResponse(url="/admin/")
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
     return app
 

@@ -306,15 +306,20 @@ python -m app.integrations.telethon.monitor
 
 ---
 
-## 🌐 Endpoints & Admin Dashboard
+## 🌐 Endpoints, Login & Admin Dashboard
 
 Once the API service is running, access the following interfaces:
 
-* **Interactive Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs) (or `http://localhost:8001/docs` under Docker port mapping)
+* **Admin Login Sahifasi:** [http://localhost:8000/login](http://localhost:8000/login) (yoki `http://<SERVER_IP>:8000/login` yoki Nginx orqali `http://<SERVER_IP>/login`)
+  * **Standart Administrator:** `admin@phishguard.uz`
+  * **Standart Parol:** `AdminPhishGuard2025!` (yoki `.env` dagi `INITIAL_ADMIN_PASSWORD`)
+  * Muvaffaqiyatli kirilgach, JWT token avtomatik saqlanib, to'g'ridan-to'g'ri boshqaruv paneliga yo'naltiriladi.
+* **Admin Web Dashboard:** [http://localhost:8000/admin](http://localhost:8000/admin)
+  * Real vaqt rejimida skanerlangan fishing va firibgar saytlar, jonli hisobotlar, Telegram hisoblari va bot ogohlantirishlari monitoringi.
+  * Tizimdan chiqish uchun yuqori o'ng burchakdagi **"Chiqish"** tugmasini bosing.
+* **Interactive Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
 * **ReDoc Documentation:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
-* **Admin Web Dashboard:** [http://localhost:8000/admin/](http://localhost:8000/admin/)
-  * Displays real-time scan statistics, live phishing risk feed, connected accounts, and delivery audit logs.
-  * Click **"Admin Kirish"** (Admin Login) to authenticate using your administrator email and password or input a direct JWT Bearer token.
+* **Nginx Reverse Proxy:** Serverda standart 80/443 portlarda ishlatish uchun `nginx/nginx.conf` va `nginx/README.md` ga qarang.
 * **Liveness Probe:**
   ```bash
   curl http://localhost:8000/api/v1/health/liveness

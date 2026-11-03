@@ -29,6 +29,22 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     JWT_ALGORITHM: str = "HS256"
 
+    # Initial Administrator Provisioning
+    INITIAL_ADMIN_EMAIL: str = Field(
+        default="admin@phishguard.uz",
+        description="Default administrator email seeded on first platform initialization",
+    )
+    INITIAL_ADMIN_PASSWORD: str = Field(
+        default="AdminPhishGuard2025!",
+        description="Default administrator password (min 8 chars)",
+    )
+
+    # CORS Configuration
+    CORS_ORIGINS: list[str] = Field(
+        default=["*"],
+        description="Allowed CORS origins list or comma-separated string",
+    )
+
     # Database Infrastructure
     DATABASE_URL: str = Field(
         ...,
@@ -56,6 +72,22 @@ class Settings(BaseSettings):
     SCANNER_TOTAL_TIMEOUT_SECONDS: int = 10
     SCANNER_MAX_RESPONSE_BYTES: int = 2097152  # 2 MB limit
     SCANNER_MAX_REDIRECTS: int = 5
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: object) -> list[str]:
+        if isinstance(v, str):
+            clean_str = v.strip()
+            if clean_str.startswith("[") and clean_str.endswith("]"):
+                import json
+                try:
+                    return json.loads(clean_str)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in clean_str.split(",") if origin.strip()]
+        if isinstance(v, list):
+            return [str(origin).strip() for origin in v]
+        return ["*"]
 
     @field_validator("APP_MASTER_KEY")
     @classmethod
